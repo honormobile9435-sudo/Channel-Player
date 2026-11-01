@@ -1,7 +1,7 @@
 {
   "id": "./",
   "name": "Channel Soundboard",
-  "short_name": "Soundboard",
+  "short_name": "Channel Sound",
   "description": "Offline soundboard mixer: channel faders, multiplay, crossfade, equalizer, timers.",
   "start_url": "./",
   "scope": "./",
