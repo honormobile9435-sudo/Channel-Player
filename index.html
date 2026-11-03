@@ -34,11 +34,11 @@ svg{display:block;fill:currentColor}
 #pp{width:38px;height:38px;border:0;background:var(--ac);color:var(--on)}
 #pp svg{width:22px;height:22px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:5px}
-.g2 button,#en,#clr,#ins{height:28px;border:1px solid var(--bd);background:transparent;border-radius:14px;font-size:12px;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx)}
+.g2 button,#en,#clr{height:28px;border:1px solid var(--bd);background:transparent;border-radius:14px;font-size:12px;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx)}
 #en{width:100%;appearance:none;-webkit-appearance:none;text-align:center;text-align-last:center;background:var(--bg)}
 [aria-pressed="true"]{background:var(--ac)!important;color:var(--on)!important;border-color:var(--ac)!important}
 .ar{display:flex;gap:6px;align-items:center}
-#tt{flex:1;font-size:12px;color:var(--mu);white-space:nowrap}
+#tt{flex:1;min-width:0;font-size:11px;color:var(--mu);white-space:nowrap;cursor:pointer}
 #clr.arm{border-color:var(--ac);color:var(--ac)}
 .ms{margin-top:auto;display:flex;align-items:center;gap:6px;font-size:12px}
 #mv{flex:1;min-width:0;accent-color:var(--ac)}
@@ -47,9 +47,11 @@ svg{display:block;fill:currentColor}
 .c.on{outline:2px solid var(--ac)}
 .c.emp .dv,.c.emp .pb,.c.emp .fd,.c.emp .pc{opacity:.35;pointer-events:none}
 .dv{width:100%;height:26px;border:0;border-radius:13px;background:var(--dk);font-size:10px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pb{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:var(--dk);display:grid;place-items:center;padding:0}
+.pb{flex:none;margin-bottom:10px;width:38px;height:38px;border-radius:50%;border:0;background:var(--dk);display:grid;place-items:center;padding:0}
 .pb svg{width:20px;height:20px}
 .c.on .pb{background:var(--ac);color:var(--on)}
+.mt{width:100%;height:26px;border:0;border-radius:13px;background:var(--dk);font-size:11px;padding:0 4px;white-space:nowrap}
+.c.emp .mt{opacity:.35;pointer-events:none}
 .fd{flex:1;min-height:50px;width:44px;position:relative;touch-action:none;display:flex;justify-content:center}
 .fd::before{content:"";width:6px;height:100%;border-radius:3px;background:var(--dk)}
 .fl{position:absolute;bottom:0;width:6px;border-radius:3px;background:var(--ac)}
@@ -77,7 +79,7 @@ svg{display:block;fill:currentColor}
 #pp{width:46px;height:46px}
 .c{width:86px}
 }
-#ins{border-color:var(--ac);color:var(--ac)}
+#ins{border-color:var(--ac);color:var(--ac);height:28px;border:1px solid var(--ac);background:transparent;border-radius:14px;padding:0 10px;font-size:12px}
 </style></head><body>
 <div id="app">
  <header id="wv"><canvas id="cv"></canvas><span id="t1">0:00</span><span id="t2">-0:00</span></header>
@@ -93,7 +95,7 @@ svg{display:block;fill:currentColor}
    </div>
    <div class="g2"><button id="tm" aria-pressed="false">⏲ Timer</button><button id="mx" aria-pressed="false">🎚 Multiplay</button><button id="sh" aria-pressed="false">🔀 Shuffle</button><button id="eqb">📶 EQ</button></div>
    <select id="en" aria-label="When a song ends"><option value="0">⏹ Stop</option><option value="1">🔁 Repeat</option><option value="2">⏭ Continue</option></select>
-   <div class="ar"><span id="tt">⏱ 0:00</span><button id="clr">Clear</button><button id="ins" hidden>Install</button></div>
+   <div class="ar"><span id="tt" title="Played / total. Tap to reset played time">⏱ 0:00 / 0:00</span><button id="clr">Clear</button><button id="ins" hidden>Install</button></div>
    <div class="ms"><span>Master</span><input id="mv" type="range" min="0" max="1" step="0.01" value="1" aria-label="Master volume"><span id="mvp">100%</span></div>
   </aside>
   <section id="ch"></section>
@@ -106,6 +108,7 @@ svg{display:block;fill:currentColor}
 <script>
 const $=s=>document.querySelector(s),A=new Map(),BUS=new Map();
 const IL='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',IP='<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+const rnd=new Set();let ka=null,kaOn=false,kaLock=false;
 let songs=[],cur=null,db=null,mode=2,multi=false,ctx=null,held=[],endAt=0,shuf=false,ep=0,bo=false,bl=8,mvol=1,SEL=null,wvS=null;
 const lsv=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 try{const g=k=>localStorage.getItem(k);if(g('csm')!==null)mode=+g('csm');if(mode===3){mode=2;shuf=true}multi=g('csx')==='1';if(g('css')==='1')shuf=true;ep=+g('cse')||0;bo=g('csb')==='1';if(g('csl')!==null)bl=+g('csl');if(g('csv')!==null)mvol=+g('csv')}catch(e){}
@@ -113,7 +116,7 @@ function openDB(){return new Promise(r=>{try{const q=indexedDB.open('channel-sou
 function tx(m,f){return new Promise(r=>{if(!db)return r(null);try{const t=db.transaction('s',m),q=f(t.objectStore('s'));t.oncomplete=()=>r(q&&q.result);t.onerror=()=>r(null)}catch(e){r(null)}})}
 const fmt=s=>{s=isFinite(s)?Math.max(0,Math.floor(s)):0;const h=Math.floor(s/3600),m=Math.floor(s%3600/60),c=String(s%60).padStart(2,'0');return h?h+':'+String(m).padStart(2,'0')+':'+c:m+':'+c};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const gv=a=>a._g?a._g.gain.value:a.volume,sv=(a,v)=>{if(a._g)a._g.gain.value=v;else a.volume=v};
+const gv=a=>a._g?a._g.gain.value:(a._lv||0),sv=(a,v)=>{if(a._g)a._g.gain.value=v;else{a._lv=v;a.volume=Math.max(0,Math.min(1,v*mvol))}};
 const nm=s=>(s.startAt||s.stopAt?'⏰ ':'')+s.name,save=s=>tx('readwrite',st=>st.put(s));
 function so(){lsv('cso',JSON.stringify(songs.map(s=>s.id)))}
 function toast(m){const t=$('#ts');t.textContent=m;t.hidden=false;clearTimeout(t._t);t._t=setTimeout(()=>t.hidden=true,2600)}
@@ -134,14 +137,16 @@ function bus(id){
 }
 function applyFx(){
  BUS.forEach(b=>{b.fs.forEach((f,i)=>{f.gain.value=PRE[ep][1][i]});b.bs.gain.value=bo?bl:0;b.mg.gain.value=mvol});
+ A.forEach(a=>{if(!a._g&&a._lv!==undefined)a.volume=Math.max(0,Math.min(1,a._lv*mvol))});
  $('#mvp').textContent=Math.round(mvol*100)+'%';
 }
 function mk(s){
  let a=A.get(s.id);if(a)return a;
  a=new Audio();a.preload='auto';a.src=URL.createObjectURL(s.blob);a._s=s;a._f=0;a._out=false;
- try{const c=gctx(),n=c.createMediaElementSource(a),g=c.createGain();g.gain.value=0;n.connect(g);g.connect(bus(s.dev).inp);a._g=g}catch(e){}
+ if(s.dev){try{a._sk=a.setSinkId(s.dev).catch(()=>toast('Device for "'+s.name+'" is not available, using default output'))}catch(e){}}
+ else try{const c=gctx(),n=c.createMediaElementSource(a),g=c.createGain();g.gain.value=0;n.connect(g);g.connect(bus().inp);a._g=g}catch(e){}
  a.addEventListener('ended',()=>ended(a));a.addEventListener('play',ui);a.addEventListener('pause',ui);
- a.addEventListener('timeupdate',()=>{if(cur&&cur.id===s.id)tu();sweep()});
+ a.addEventListener('timeupdate',()=>{const t=a.currentTime,d=t-(a._lt||0);a._lt=t;if(d>0&&d<1.5&&!a.paused)s._pl=Math.min(s.dur||1e9,(s._pl||0)+d);if(cur&&cur.id===s.id)tu();total();sweep()});
  A.set(s.id,a);return a;
 }
 function fade(a,tg,D,done){
@@ -153,12 +158,14 @@ function fade(a,tg,D,done){
   if(p<1)setTimeout(f,40);else if(done)done();
  })();
 }
+const ev=s=>s.mute?0:s.vol;
 function start(s){
+ rnd.add(s.id);
  const a=mk(s);if(ctx&&ctx.state!=='running')ctx.resume();
  a._out=false;if(a.paused)sv(a,0);
- a.play().catch(()=>{});fade(a,()=>s.vol,1200,null);cur=s;ui();
+ (a._sk||Promise.resolve()).then(()=>a.play()).catch(()=>{});fade(a,()=>ev(s),1200,null);cur=s;ui();
 }
-function out(a,D){a._out=true;fade(a,()=>0,D||1200,()=>{a.pause();a._out=false})}
+function out(a,D,cb){a._out=true;fade(a,()=>0,D||1200,()=>{a.pause();a._out=false;if(cb)cb()})}
 function halt(a){a._f++;a._out=false;a.pause()}
 function live(a){return !a.paused&&!a._out}
 function al(){let x=false;A.forEach(a=>{if(live(a))x=true});return x}
@@ -172,11 +179,16 @@ function ended(a){
  const s=a._s;a._out=false;
  if(mode===0){ui();return}
  if(mode===1){a.currentTime=0;a.play().catch(()=>{});return}
+ nextAfter(s);
+}
+function nextAfter(s){
  if(!songs.length)return;
  const i=songs.findIndex(x=>x.id===s.id);let j;
- if(!shuf)j=(i+1)%songs.length;
- else{j=i;if(songs.length>1)while(j===i)j=Math.floor(Math.random()*songs.length)}
- if(songs[j].id===s.id){a.currentTime=0;a.play().catch(()=>{});return}
+ if(shuf){
+  const L=songs.filter(x=>!rnd.has(x.id)&&x.id!==s.id);
+  if(!L.length){rnd.clear();ui();return}
+  j=songs.indexOf(L[Math.floor(Math.random()*L.length)]);
+ }else{j=i+1;if(j>=songs.length){ui();return}}
  const n=mk(songs[j]);
  if(live(n)){ui();return}
  n.currentTime=0;start(songs[j]);
@@ -229,7 +241,7 @@ function tu(){
 }
 function msu(){
  if(!('mediaSession' in navigator))return;
- try{const m=navigator.mediaSession;m.metadata=cur?new MediaMetadata({title:cur.name,artist:'Channel Soundboard'}):null;m.playbackState=al()?'playing':'paused'}catch(e){}
+ try{const m=navigator.mediaSession;if(kaOn&&!al()){m.metadata=new MediaMetadata({title:'Waiting for scheduled start',artist:'Channel Soundboard'});m.playbackState='playing';return}m.metadata=cur?new MediaMetadata({title:cur.name,artist:'Channel Soundboard'}):null;m.playbackState=al()?'playing':'paused'}catch(e){}
 }
 if('mediaSession' in navigator){
  const m=navigator.mediaSession,h=(n,f)=>{try{m.setActionHandler(n,f)}catch(e){}};
@@ -242,18 +254,19 @@ if('mediaSession' in navigator){
 function paint(c,s){const v=s?s.vol:1;c.querySelector('.fl').style.height=v*100+'%';c.querySelector('.kn').style.bottom=v*100+'%';c.querySelector('.pc').textContent=Math.round(v*100)+'%'}
 function fader(c,s){
  const f=c.querySelector('.fd');let on=false;
- const set=e=>{const r=f.getBoundingClientRect();s.vol=Math.max(0,Math.min(1,1-(e.clientY-r.top)/r.height));paint(c,s);const a=A.get(s.id);if(a&&live(a))sv(a,s.vol)};
+ const set=e=>{const r=f.getBoundingClientRect();s.vol=Math.max(0,Math.min(1,1-(e.clientY-r.top)/r.height));paint(c,s);const a=A.get(s.id);if(a&&live(a))sv(a,ev(s))};
  f.onpointerdown=e=>{on=true;f.setPointerCapture(e.pointerId);set(e)};
  f.onpointermove=e=>{if(on)set(e)};
  f.onpointerup=f.onpointercancel=()=>{if(on){on=false;save(s)}};
 }
+function mtp(c,s){const b=c.querySelector('.mt');b.textContent=s&&s.mute?'🔇 Muted':'🔊 Mute';b.setAttribute('aria-pressed',!!(s&&s.mute))}
 function strip(s){
  const c=document.createElement('div');c.className='c'+(s?'':' emp');
- c.innerHTML='<button class="dv"></button><button class="pb">'+IL+'</button><div class="fd"><div class="fl"></div><div class="kn"></div></div><span class="pc"></span><button class="ad"><span class="nm"></span><span class="du"></span></button>';
+ c.innerHTML='<button class="dv"></button><button class="mt" aria-label="Mute this channel"></button><button class="pb">'+IL+'</button><div class="fd"><div class="fl"></div><div class="kn"></div></div><span class="pc"></span><button class="ad"><span class="nm"></span><span class="du"></span></button>';
  c.querySelector('.dv').textContent='🔈 '+(s&&s.devn?s.devn:'Default');
  if(s){c.dataset.id=s.id;c.querySelector('.nm').textContent=nm(s);c.querySelector('.du').textContent=s.dur?fmt(s.dur):'--:--';fader(c,s)}
  else c.querySelector('.nm').textContent='+ Add song';
- paint(c,s);return c;
+ paint(c,s);mtp(c,s);return c;
 }
 function render(){const g=$('#ch');g.textContent='';songs.forEach(s=>g.append(strip(s)));g.append(strip(null));total()}
 function ui(){
@@ -273,6 +286,7 @@ $('#ch').addEventListener('click',e=>{
  const s=songs.find(x=>x.id===+c.dataset.id);
  if(e.target.closest('.ad')){if(!s)$('#fi').click();else{SEL=s;sheet(sCh(s))}}
  else if(!s)return;
+ else if(e.target.closest('.mt')){s.mute=!s.mute;mtp(c,s);const a=A.get(s.id);if(a&&live(a))fade(a,()=>ev(s),200,null);save(s)}
  else if(e.target.closest('.pb'))play(s);
  else if(e.target.closest('.dv'))openDev(s);
 });
@@ -312,18 +326,41 @@ function tick(){
  label();
 }
 const mins=t=>{if(!t)return -1;const p=t.split(':').map(Number);return p[0]*60+p[1]};
+function rn(s){const e=document.querySelector('.c[data-id="'+s.id+'"] .nm');if(e)e.textContent=nm(s)}
 function sched(){
- const d=new Date(),n=d.getHours()*60+d.getMinutes(),dk=d.toDateString();
+ const d=new Date(),n=d.getHours()*60+d.getMinutes();
  songs.forEach(s=>{
   const a=mins(s.startAt),b=mins(s.stopAt),o=A.get(s.id);
-  if(a>=0&&n>=a&&n<a+2&&s._ks!==dk){
-   s._ks=dk;
+  if(a>=0&&n>=a&&n<a+2){
+   s.startAt='';save(s);rn(s);
    if(!(o&&live(o))){if(!multi)A.forEach(x=>{if(live(x)&&x._s!==s)out(x)});start(s)}
   }
-  if(b>=0&&n>=b&&n<b+2&&s._kx!==dk){s._kx=dk;if(o&&live(o))out(o,2500)}
+  if(b>=0&&n>=b&&n<b+2){
+   s.stopAt='';save(s);rn(s);
+   if(o&&live(o))out(o,2500,()=>{if(mode===2)nextAfter(s)});
+  }
  });
 }
-function sweep(){tick();sched()}
+/* Keep the page awake while a scheduled start is waiting (phone locked / screen off) */
+function kaEl(){
+ if(ka)return ka;
+ const sr=8000,n=sr*2,b=new ArrayBuffer(44+n*2),v=new DataView(b),w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+ w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+ for(let i=0;i<n;i++)v.setInt16(44+i*2,Math.sin(2*Math.PI*20*i/sr)*160,true);
+ ka=new Audio(URL.createObjectURL(new Blob([b],{type:'audio/wav'})));ka.loop=true;return ka;
+}
+function kaSync(){
+ const was=kaOn,need=songs.some(s=>s.startAt)&&!al();
+ try{
+  if(need){
+   if(!kaLock&&navigator.locks){kaLock=true;navigator.locks.request('cs-keepalive',()=>new Promise(()=>{}))}
+   const k=kaEl();if(k.paused)k.play().catch(()=>{kaOn=false});kaOn=!k.paused;
+  }else{if(ka&&!ka.paused)ka.pause();kaOn=false}
+ }catch(e){kaOn=false}
+ if(was!==kaOn)msu();
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)sweep()});
+function sweep(){tick();sched();kaSync()}
 setInterval(sweep,1000);
 /* Sheets (timer, equalizer, channel menu, sound device) */
 function sheet(h){const m=$('#md');m.innerHTML='<div class="bx">'+h+'</div>';m.hidden=false}
@@ -335,15 +372,29 @@ $('#tm').onclick=()=>sheet(sTm());
 $('#eqb').onclick=()=>sheet(sEq());
 async function openDev(s){
  if(!window.HTMLMediaElement||!HTMLMediaElement.prototype.setSinkId||!navigator.mediaDevices){toast('This browser cannot choose sound devices. Try Chrome.');return}
- let L=[];try{L=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput'&&d.deviceId!=='default')}catch(e){}
+ let L=[];try{L=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput'&&d.deviceId&&d.deviceId!=='default')}catch(e){}
  SEL=s;
- sheet('<h3>Sound device for this channel</h3><button class="sb" data-a="dev" data-id="">Default output</button>'+L.map((d,i)=>{const n=esc(d.label||'Device '+(i+1));return '<button class="sb" data-a="dev" data-id="'+esc(d.deviceId)+'" data-n="'+n+'">'+n+'</button>'}).join('')+(navigator.mediaDevices.selectAudioOutput?'<button class="sb" data-a="pick">Choose another device…</button>':'')+'<button class="sb" data-a="x">Close</button>');
+ const emb=window.self!==window.top,nt=L.length?'':'<p class="lb" style="margin:0">'+(emb?'Chrome blocks the output-device list while this page runs inside another page. Open the app on its own: the GitHub Pages link, the installed app, or the downloaded index.html file.':'Chrome hides the device list until you allow it. Tap "Show my devices" and allow the microphone once (only to reveal device names; nothing is recorded).')+'</p>';
+ sheet('<h3>Sound device for this channel <small>(v6)</small></h3>'+nt+'<p class="lb" style="margin:0">Each channel keeps its own device. Equalizer and bass boost work only on channels that use the default output.</p>'+'<button class="sb" data-a="dev" data-id="" aria-pressed="'+!s.dev+'">Default output</button>'+L.map((d,i)=>{const n=esc(d.label||'Device '+(i+1));return '<button class="sb" data-a="dev" data-id="'+esc(d.deviceId)+'" data-n="'+n+'" aria-pressed="'+(d.deviceId===s.dev)+'">'+n+'</button>'}).join('')+(navigator.mediaDevices.selectAudioOutput?'<button class="sb" data-a="pick">Choose another device…</button>':'')+(L.length?'':'<button class="sb" data-a="names">Show my devices</button>')+'<button class="sb" data-a="x">Close</button>');
+}
+function beep(id){
+ try{
+  const n=22050,b=new ArrayBuffer(44+n*2),v=new DataView(b),w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,22050,true);v.setUint32(28,44100,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++)v.setInt16(44+i*2,Math.sin(i*2*Math.PI*660/22050)*9000*Math.min(1,i/800,(n-i)/800),true);
+  const a=new Audio(URL.createObjectURL(new Blob([b],{type:'audio/wav'}))),go=()=>a.play().catch(()=>{});
+  a.onended=()=>URL.revokeObjectURL(a.src);
+  if(id&&a.setSinkId)a.setSinkId(id).then(go,()=>{toast('Beep could not use that device');go()});else go();
+ }catch(e){}
 }
 async function setDev(s,id,n){
- if(id){try{const b=bus(id);if(b.el)await b.el.setSinkId(id);if(b.el)b.el.play().catch(()=>{})}catch(e){toast('Cannot use that device');return}}
+ if(id){try{await new Audio().setSinkId(id)}catch(e){toast(e&&e.name==='NotAllowedError'?'Chrome blocked this here. Open the app on its own page.':'Cannot use that device');return}}
+ const a=A.get(s.id),was=!!a&&!a.paused,pos=a?a.currentTime:0;
+ if(a){halt(a);URL.revokeObjectURL(a.src);A.delete(s.id)}
  s.dev=id;s.devn=id?(n||'Device'):'';
- const a=A.get(s.id);if(a&&a._g){try{a._g.disconnect();a._g.connect(bus(s.dev).inp)}catch(e){}}
  save(s);shut();render();ui();
+ if(was){mk(s).currentTime=pos;start(s)}
+ beep(id);toast('"'+s.name+'" now plays on: '+(id?s.devn:'Default output')+' - you should hear a short beep there');
 }
 $('#md').addEventListener('click',async e=>{
  if(e.target.id==='md')return shut();
@@ -359,8 +410,9 @@ $('#md').addEventListener('click',async e=>{
  else if(k==='mvl'||k==='mvr'){const i=songs.indexOf(s),j=i+(k==='mvl'?-1:1);if(j>=0&&j<songs.length){songs.splice(i,1);songs.splice(j,0,s);so();render();ui()}}
  else if(k==='rp')$('#fr').click();
  else if(k==='del'){const a=A.get(s.id);if(a){halt(a);URL.revokeObjectURL(a.src);A.delete(s.id)}if(cur&&cur.id===s.id)cur=null;songs=songs.filter(x=>x!==s);so();await tx('readwrite',st=>st.delete(s.id));shut();render();ui()}
+ else if(k==='names'){try{const st=await navigator.mediaDevices.getUserMedia({audio:true});st.getTracks().forEach(t=>t.stop())}catch(x){toast('Permission was not given');return}openDev(s)}
  else if(k==='dev')await setDev(s,b.dataset.id||'',b.dataset.n||'');
- else if(k==='pick'){try{const d=await navigator.mediaDevices.selectAudioOutput();await setDev(s,d.deviceId,d.label)}catch(x){}}
+ else if(k==='pick'){try{const d=await navigator.mediaDevices.selectAudioOutput();await setDev(s,d.deviceId,d.label)}catch(x){toast(x&&x.name==='NotAllowedError'?'Chrome blocked device choosing here. Open the app on its own page.':'No device chosen')}}
 });
 $('#md').addEventListener('change',e=>{
  const t=e.target,s=SEL;if(!s||!t.dataset.t)return;
@@ -374,7 +426,8 @@ $('#md').addEventListener('input',e=>{
 });
 /* Adding, replacing, clearing songs */
 function dur(b){return new Promise(r=>{const a=new Audio(),u=URL.createObjectURL(b);const f=v=>{URL.revokeObjectURL(u);r(v)};a.preload='metadata';a.onloadedmetadata=()=>f(isFinite(a.duration)?a.duration:0);a.onerror=()=>f(0);setTimeout(()=>f(0),8000);a.src=u})}
-function total(){$('#tt').textContent='⏱ '+fmt(songs.reduce((x,s)=>x+(s.dur||0),0))}
+function total(){const T=songs.reduce((x,s)=>x+(s.dur||0),0),P=songs.reduce((x,s)=>x+Math.min(s._pl||0,s.dur||0),0);$('#tt').textContent='⏱ '+fmt(P)+' / '+fmt(T)}
+$('#tt').onclick=()=>{songs.forEach(x=>{x._pl=0});rnd.clear();total();toast('Played time reset')};
 async function fixDur(){for(const s of songs.slice()){if(s.dur===undefined){s.dur=await dur(s.blob);await save(s);const e=document.querySelector('.c[data-id="'+s.id+'"] .du');if(e)e.textContent=s.dur?fmt(s.dur):'--:--';total()}}}
 $('#fi').onchange=async e=>{
  let k=0;
@@ -408,7 +461,7 @@ $('#clr').onclick=async()=>{
  songs.sort((a,b)=>{const x=od.indexOf(a.id),y=od.indexOf(b.id);return(x<0?1e9:x)-(y<0?1e9:y)||a.id-b.id});
  render();ui();label();draw();fixDur();
 })();
-/* PWA: offline, install (phone + computer), keep songs safe, keyboard */
+/* PWA: offline + install (phone and computer) + keep songs safe + keyboard */
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 let dip=null;

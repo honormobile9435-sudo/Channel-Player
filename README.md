@@ -20,7 +20,7 @@ Songs are stored on your own device (IndexedDB) - nothing is uploaded. No ads, n
 After the first open it works offline. Songs are saved per device/browser, so add them again on each device.
 
 ## Good to know
-- **Output-device button:** works best in Chrome/Edge on a computer (speakers, Bluetooth, USB, HDMI). Phones usually expose only one output, and iPhone has none. If a device cannot be used the app says so and keeps playing on the default output.
+- **Output-device button:** works best in Chrome/Edge on a computer (speakers, Bluetooth, USB, HDMI). Phones usually expose only one output, and iPhone has none. Each channel keeps its own device. Equalizer and bass boost work only on channels using the default output. If a device cannot be used the app says so and keeps playing on the default output.
 - Timers and per-song start/stop times only run while the app is open.
 - Keyboard (computer): Space = play/pause, Left/Right = 10 seconds back/forward.
 - After changing files on GitHub, bump `CACHE` in `sw.js` (`soundboard-v4`, ...) so devices pick up the update.
