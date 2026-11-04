@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Channel Soundboard</title>
+<title>Channel Soundboard v7 - Balram Sevak</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#13151a">
 <meta name="mobile-web-app-capable" content="yes">
@@ -14,6 +14,10 @@
 :root{--bg:#e8eef3;--sf:#fff;--tx:#14212e;--mu:#5a6b7b;--ac:#0a6c8f;--on:#fff;--bd:#c9d4de;--rw:#d3dde7;--dk:#fff}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13151a;--sf:#1c1f26;--tx:#e6e8ee;--mu:#9aa0ad;--ac:#f2b53d;--on:#1b1300;--bd:#343843;--rw:#454851;--dk:#13151a}}
 :root[data-theme="dark"]{--bg:#13151a;--sf:#1c1f26;--tx:#e6e8ee;--mu:#9aa0ad;--ac:#f2b53d;--on:#1b1300;--bd:#343843;--rw:#454851;--dk:#13151a}
+:root[data-theme="blue"]{--bg:#0b1a2b;--sf:#112640;--tx:#e8f1fb;--mu:#8fb0d0;--ac:#4cc9f0;--on:#00212b;--bd:#2b4c75;--rw:#1b3a5c;--dk:#0b1a2b}
+:root[data-theme="green"]{--bg:#0f1a14;--sf:#15261c;--tx:#e7f5ec;--mu:#8fb89e;--ac:#4ade80;--on:#04210f;--bd:#2c5039;--rw:#1f3a2a;--dk:#0f1a14}
+#stb{width:100%}
+.bx details{border:1px solid var(--bd);border-radius:10px;padding:6px 10px}.bx summary{cursor:pointer;font-weight:600}.bx p,.bx li{font-size:13px;margin:6px 0}.bx ul,.bx ol{margin:4px 0;padding-left:18px}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%;margin:0;overflow:hidden}
@@ -34,7 +38,7 @@ svg{display:block;fill:currentColor}
 #pp{width:38px;height:38px;border:0;background:var(--ac);color:var(--on)}
 #pp svg{width:22px;height:22px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:5px}
-.g2 button,#en,#clr{height:28px;border:1px solid var(--bd);background:transparent;border-radius:14px;font-size:12px;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx)}
+.g2 button,#en,#clr,#stb{height:28px;border:1px solid var(--bd);background:transparent;border-radius:14px;font-size:12px;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx)}
 #en{width:100%;appearance:none;-webkit-appearance:none;text-align:center;text-align-last:center;background:var(--bg)}
 [aria-pressed="true"]{background:var(--ac)!important;color:var(--on)!important;border-color:var(--ac)!important}
 .ar{display:flex;gap:6px;align-items:center}
@@ -95,6 +99,7 @@ svg{display:block;fill:currentColor}
    </div>
    <div class="g2"><button id="tm" aria-pressed="false">⏲ Timer</button><button id="mx" aria-pressed="false">🎚 Multiplay</button><button id="sh" aria-pressed="false">🔀 Shuffle</button><button id="eqb">📶 EQ</button></div>
    <select id="en" aria-label="When a song ends"><option value="0">⏹ Stop</option><option value="1">🔁 Repeat</option><option value="2">⏭ Continue</option></select>
+   <button id="stb">⚙ Settings &amp; About</button>
    <div class="ar"><span id="tt" title="Played / total. Tap to reset played time">⏱ 0:00 / 0:00</span><button id="clr">Clear</button><button id="ins" hidden>Install</button></div>
    <div class="ms"><span>Master</span><input id="mv" type="range" min="0" max="1" step="0.01" value="1" aria-label="Master volume"><span id="mvp">100%</span></div>
   </aside>
@@ -110,7 +115,11 @@ const $=s=>document.querySelector(s),A=new Map(),BUS=new Map();
 const IL='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',IP='<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
 const rnd=new Set();let ka=null,kaOn=false,kaLock=false;
 let songs=[],cur=null,db=null,mode=2,multi=false,ctx=null,held=[],endAt=0,shuf=false,ep=0,bo=false,bl=8,mvol=1,SEL=null,wvS=null;
-const lsv=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const lsv=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+let fadeS=1.2;{const f=lg('cs_fade');if(f!==null)fadeS=+f}
+const FD=()=>Math.max(0.05,fadeS)*1000;
+function setTheme(t){lsv('cs_theme',t);if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t)}
+{const t=lg('cs_theme');if(t&&t!=='auto')document.documentElement.setAttribute('data-theme',t)}
 try{const g=k=>localStorage.getItem(k);if(g('csm')!==null)mode=+g('csm');if(mode===3){mode=2;shuf=true}multi=g('csx')==='1';if(g('css')==='1')shuf=true;ep=+g('cse')||0;bo=g('csb')==='1';if(g('csl')!==null)bl=+g('csl');if(g('csv')!==null)mvol=+g('csv')}catch(e){}
 function openDB(){return new Promise(r=>{try{const q=indexedDB.open('channel-soundboard',1);q.onupgradeneeded=()=>q.result.createObjectStore('s',{keyPath:'id'});q.onsuccess=()=>{db=q.result;r()};q.onerror=()=>r()}catch(e){r()}})}
 function tx(m,f){return new Promise(r=>{if(!db)return r(null);try{const t=db.transaction('s',m),q=f(t.objectStore('s'));t.oncomplete=()=>r(q&&q.result);t.onerror=()=>r(null)}catch(e){r(null)}})}
@@ -163,9 +172,9 @@ function start(s){
  rnd.add(s.id);
  const a=mk(s);if(ctx&&ctx.state!=='running')ctx.resume();
  a._out=false;if(a.paused)sv(a,0);
- (a._sk||Promise.resolve()).then(()=>a.play()).catch(()=>{});fade(a,()=>ev(s),1200,null);cur=s;ui();
+ (a._sk||Promise.resolve()).then(()=>a.play()).catch(()=>{});fade(a,()=>ev(s),FD(),null);cur=s;ui();
 }
-function out(a,D,cb){a._out=true;fade(a,()=>0,D||1200,()=>{a.pause();a._out=false;if(cb)cb()})}
+function out(a,D,cb){a._out=true;fade(a,()=>0,D||FD(),()=>{a.pause();a._out=false;if(cb)cb()})}
 function halt(a){a._f++;a._out=false;a.pause()}
 function live(a){return !a.paused&&!a._out}
 function al(){let x=false;A.forEach(a=>{if(live(a))x=true});return x}
@@ -188,7 +197,7 @@ function nextAfter(s){
   const L=songs.filter(x=>!rnd.has(x.id)&&x.id!==s.id);
   if(!L.length){rnd.clear();ui();return}
   j=songs.indexOf(L[Math.floor(Math.random()*L.length)]);
- }else{j=i+1;if(j>=songs.length){ui();return}}
+ }else{for(j=i+1;j<songs.length;j++){const q=A.get(songs[j].id);if(!(q&&live(q))&&!rnd.has(songs[j].id))break}if(j>=songs.length){ui();return}}
  const n=mk(songs[j]);
  if(live(n)){ui();return}
  n.currentTime=0;start(songs[j]);
@@ -349,8 +358,10 @@ function kaEl(){
  for(let i=0;i<n;i++)v.setInt16(44+i*2,Math.sin(2*Math.PI*20*i/sr)*160,true);
  ka=new Audio(URL.createObjectURL(new Blob([b],{type:'audio/wav'})));ka.loop=true;return ka;
 }
+function audible(){let x=false;A.forEach(a=>{if(live(a)&&ev(a._s)>0)x=true});return x}
+function silentPlay(){let x=false;A.forEach(a=>{if(live(a)&&ev(a._s)<=0)x=true});return x}
 function kaSync(){
- const was=kaOn,need=songs.some(s=>s.startAt)&&!al();
+ const was=kaOn,need=(songs.some(s=>s.startAt)||silentPlay())&&!audible();
  try{
   if(need){
    if(!kaLock&&navigator.locks){kaLock=true;navigator.locks.request('cs-keepalive',()=>new Promise(()=>{}))}
@@ -369,7 +380,12 @@ const sTm=()=>'<h3>Stop everything at</h3><div class="ln"><input id="ct" class="
 const sEq=()=>'<h3>Equalizer</h3><div class="pl">'+PRE.map((p,i)=>'<button data-a="pre" data-i="'+i+'" aria-pressed="'+(i===ep)+'">'+p[0]+'</button>').join('')+'</div><div class="ln"><button class="sb" data-a="bb" aria-pressed="'+bo+'">Bass boost</button><input id="bl" type="range" min="0" max="12" step="1" value="'+bl+'"><span id="bt" class="lb">+'+bl+' dB</span></div><button class="sb" data-a="x">Close</button>';
 const sCh=s=>'<h3>'+esc(s.name)+'</h3><div class="ln"><span class="lb">Start</span><input class="in" type="time" data-t="s" value="'+(s.startAt||'')+'"><span class="lb">Stop</span><input class="in" type="time" data-t="e" value="'+(s.stopAt||'')+'"></div><button class="sb" data-a="clt">Clear start/stop times</button><div class="ln"><button class="sb" data-a="mvl">◀ Move left</button><button class="sb" data-a="mvr">Move right ▶</button></div><div class="ln"><button class="sb" data-a="rp">Replace song</button><button class="sb" data-a="del">Delete</button></div><button class="sb" data-a="x">Close</button>';
 $('#tm').onclick=()=>sheet(sTm());
+const sSt=()=>'<h3>Settings</h3><div class="lb">Fade in / out (play, pause, crossfade)</div><div class="ln"><input id="fd" type="range" min="0" max="6" step="0.5" value="'+fadeS+'"><span id="fdt" class="lb">'+(fadeS?fadeS+' s':'Off')+'</span></div>'
+ +'<div class="lb">Display theme</div><div class="pl">'+['auto','dark','light','blue','green'].map(t=>'<button data-a="th" data-v="'+t+'" aria-pressed="'+((lg('cs_theme')||'auto')===t)+'">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div>'
+ +'<div class="lb">Audio</div><button class="sb" data-a="eqo">Equalizer &amp; bass boost</button>'
+ +'<details><summary>About</summary><p><b>Channel Soundboard v7</b><br>Creator: <b>Balram Sevak</b></p><p>A free, offline soundboard mixer. Every song is a channel with its own fader, mute and play button.</p></details><details><summary>Features</summary><ul><li>Unlimited channels, per-channel volume and mute</li><li>Multiplay, crossfade, shuffle, repeat, continue</li><li>Equalizer presets and bass boost</li><li>Timer and per-song start/stop times</li><li>Waveform seek bar, rewind/forward</li><li>Works offline, installs like an app</li></ul></details><details><summary>How to play</summary><ol><li>Tap <b>+ Add song</b> and pick songs from your phone.</li><li>Tap the round play button on a channel.</li><li>Drag the fader for volume, tap the speaker button to mute only that song.</li><li>Choose Stop, Repeat or Continue for what happens when a song ends.</li><li>Tap the song name for start/stop time, moving or deleting.</li></ol></details><details><summary>Why it is useful</summary><p>Play many sounds together or one after another, prepare a playlist for a programme, and let the timer start or stop songs for you, all without internet.</p></details><details><summary>Other</summary><ul><li>Songs stay on this device only; nothing is uploaded.</li><li>Timers need the app open.</li><li>Fade 0 = no fade, 6 = slow crossfade.</li></ul></details>'+'<button class="sb" data-a="x">Close</button>';
 $('#eqb').onclick=()=>sheet(sEq());
+$('#stb').onclick=()=>sheet(sSt());
 async function openDev(s){
  if(!window.HTMLMediaElement||!HTMLMediaElement.prototype.setSinkId||!navigator.mediaDevices){toast('This browser cannot choose sound devices. Try Chrome.');return}
  let L=[];try{L=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput'&&d.deviceId&&d.deviceId!=='default')}catch(e){}
@@ -401,6 +417,8 @@ $('#md').addEventListener('click',async e=>{
  const b=e.target.closest('[data-a]');if(!b)return;
  const k=b.dataset.a,s=SEL;
  if(k==='x')shut();
+ else if(k==='th'){setTheme(b.dataset.v);sheet(sSt())}
+ else if(k==='eqo')sheet(sEq());
  else if(k==='pre'){ep=+b.dataset.i;lsv('cse',ep);applyFx();sheet(sEq())}
  else if(k==='bb'){bo=!bo;lsv('csb',bo?'1':'0');applyFx();sheet(sEq())}
  else if(k==='set'){const v=$('#ct').value;if(!v)return;const p=v.split(':').map(Number),d=new Date();d.setHours(p[0],p[1],0,0);if(d<=Date.now())d.setDate(d.getDate()+1);endAt=+d;label();shut()}
@@ -421,6 +439,7 @@ $('#md').addEventListener('change',e=>{
  const n=document.querySelector('.c[data-id="'+s.id+'"] .nm');if(n)n.textContent=nm(s);
 });
 $('#md').addEventListener('input',e=>{
+ if(e.target.id==='fd'){fadeS=+e.target.value;lsv('cs_fade',fadeS);$('#fdt').textContent=fadeS?fadeS+' s':'Off';return}
  if(e.target.id!=='bl')return;
  bl=+e.target.value;bo=bl>0;lsv('csl',bl);lsv('csb',bo?'1':'0');applyFx();$('#bt').textContent='+'+bl+' dB';
 });
