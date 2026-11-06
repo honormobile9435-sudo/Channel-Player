@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Channel Soundboard v7 - Balram Sevak</title>
+<title>Channel Soundboard v8 - Balram Sevak</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#13151a">
 <meta name="mobile-web-app-capable" content="yes">
@@ -47,7 +47,7 @@ svg{display:block;fill:currentColor}
 .ms{margin-top:auto;display:flex;align-items:center;gap:6px;font-size:12px}
 #mv{flex:1;min-width:0;accent-color:var(--ac)}
 #ch{flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;padding:8px;align-items:stretch}
-.c{flex:none;width:78px;display:flex;flex-direction:column;align-items:center;gap:5px;background:var(--rw);border-radius:14px;padding:6px 4px}
+.c{position:relative;flex:none;width:78px;display:flex;flex-direction:column;align-items:center;gap:5px;background:var(--rw);border-radius:14px;padding:6px 4px}
 .c.on{outline:2px solid var(--ac)}
 .c.emp .dv,.c.emp .pb,.c.emp .fd,.c.emp .pc{opacity:.35;pointer-events:none}
 .dv{width:100%;height:26px;border:0;border-radius:13px;background:var(--dk);font-size:10px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -61,6 +61,9 @@ svg{display:block;fill:currentColor}
 .fl{position:absolute;bottom:0;width:6px;border-radius:3px;background:var(--ac)}
 .kn{position:absolute;left:50%;width:34px;height:16px;margin:0 0 -8px -17px;border-radius:6px;background:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .pc{font-size:11px}
+.dg{flex:none;width:100%;height:22px;border:0;background:transparent;color:var(--mu);display:grid;place-items:center;padding:0;touch-action:none;cursor:grab}
+.c.emp .dg{visibility:hidden}
+.c.dr{z-index:4;box-shadow:0 8px 20px rgba(0,0,0,.4)}
 .ad{width:100%;border:0;background:var(--dk);border-radius:10px;padding:4px 2px;font-size:11px;display:flex;flex-direction:column;align-items:center;overflow:hidden}
 .nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .du{font-size:10px;color:var(--mu)}
@@ -99,7 +102,7 @@ svg{display:block;fill:currentColor}
    </div>
    <div class="g2"><button id="tm" aria-pressed="false">⏲ Timer</button><button id="mx" aria-pressed="false">🎚 Multiplay</button><button id="sh" aria-pressed="false">🔀 Shuffle</button><button id="eqb">📶 EQ</button></div>
    <select id="en" aria-label="When a song ends"><option value="0">⏹ Stop</option><option value="1">🔁 Repeat</option><option value="2">⏭ Continue</option></select>
-   <button id="stb">⚙ Settings &amp; About</button>
+   <button id="stb">⚙ Settings</button>
    <div class="ar"><span id="tt" title="Played / total. Tap to reset played time">⏱ 0:00 / 0:00</span><button id="clr">Clear</button><button id="ins" hidden>Install</button></div>
    <div class="ms"><span>Master</span><input id="mv" type="range" min="0" max="1" step="0.01" value="1" aria-label="Master volume"><span id="mvp">100%</span></div>
   </aside>
@@ -188,6 +191,8 @@ function ended(a){
  const s=a._s;a._out=false;
  if(mode===0){ui();return}
  if(mode===1){a.currentTime=0;a.play().catch(()=>{});return}
+ let other=false;A.forEach(x=>{if(x!==a&&live(x))other=true});
+ if(other){ui();return}   // another song is still playing: the list carries on when that one ends
  nextAfter(s);
 }
 function nextAfter(s){
@@ -271,7 +276,7 @@ function fader(c,s){
 function mtp(c,s){const b=c.querySelector('.mt');b.textContent=s&&s.mute?'🔇 Muted':'🔊 Mute';b.setAttribute('aria-pressed',!!(s&&s.mute))}
 function strip(s){
  const c=document.createElement('div');c.className='c'+(s?'':' emp');
- c.innerHTML='<button class="dv"></button><button class="mt" aria-label="Mute this channel"></button><button class="pb">'+IL+'</button><div class="fd"><div class="fl"></div><div class="kn"></div></div><span class="pc"></span><button class="ad"><span class="nm"></span><span class="du"></span></button>';
+ c.innerHTML='<button class="dv"></button><button class="mt" aria-label="Mute this channel"></button><button class="pb">'+IL+'</button><div class="fd"><div class="fl"></div><div class="kn"></div></div><span class="pc"></span><button class="ad"><span class="nm"></span><span class="du"></span></button><button class="dg" aria-label="Hold and drag to move this song"><svg viewBox="0 0 24 10" width="22" height="9"><circle cx="5" cy="2" r="1.6"/><circle cx="12" cy="2" r="1.6"/><circle cx="19" cy="2" r="1.6"/><circle cx="5" cy="8" r="1.6"/><circle cx="12" cy="8" r="1.6"/><circle cx="19" cy="8" r="1.6"/></svg></button>';
  c.querySelector('.dv').textContent='🔈 '+(s&&s.devn?s.devn:'Default');
  if(s){c.dataset.id=s.id;c.querySelector('.nm').textContent=nm(s);c.querySelector('.du').textContent=s.dur?fmt(s.dur):'--:--';fader(c,s)}
  else c.querySelector('.nm').textContent='+ Add song';
@@ -288,7 +293,7 @@ function ui(){
  });
  $('#en').value=mode;$('#sh').setAttribute('aria-pressed',shuf);$('#mx').setAttribute('aria-pressed',multi);
  if(cur!==wvS){wvS=cur;if(cur)peaks(cur).then(draw)}
- tu();msu();
+ tu();msu();kaSync();
 }
 $('#ch').addEventListener('click',e=>{
  const c=e.target.closest('.c');if(!c)return;
@@ -361,7 +366,7 @@ function kaEl(){
 function audible(){let x=false;A.forEach(a=>{if(live(a)&&ev(a._s)>0)x=true});return x}
 function silentPlay(){let x=false;A.forEach(a=>{if(live(a)&&ev(a._s)<=0)x=true});return x}
 function kaSync(){
- const was=kaOn,need=(songs.some(s=>s.startAt)||silentPlay())&&!audible();
+ const was=kaOn,need=songs.some(s=>s.startAt)||al()||!!endAt;
  try{
   if(need){
    if(!kaLock&&navigator.locks){kaLock=true;navigator.locks.request('cs-keepalive',()=>new Promise(()=>{}))}
@@ -379,11 +384,36 @@ function shut(){$('#md').hidden=true;SEL=null}
 const sTm=()=>'<h3>Stop everything at</h3><div class="ln"><input id="ct" class="in" type="time" aria-label="Stop time"><button class="sb" data-a="set">Set</button></div><button class="sb" data-a="cx">Cancel timer</button><button class="sb" data-a="x">Close</button>';
 const sEq=()=>'<h3>Equalizer</h3><div class="pl">'+PRE.map((p,i)=>'<button data-a="pre" data-i="'+i+'" aria-pressed="'+(i===ep)+'">'+p[0]+'</button>').join('')+'</div><div class="ln"><button class="sb" data-a="bb" aria-pressed="'+bo+'">Bass boost</button><input id="bl" type="range" min="0" max="12" step="1" value="'+bl+'"><span id="bt" class="lb">+'+bl+' dB</span></div><button class="sb" data-a="x">Close</button>';
 const sCh=s=>'<h3>'+esc(s.name)+'</h3><div class="ln"><span class="lb">Start</span><input class="in" type="time" data-t="s" value="'+(s.startAt||'')+'"><span class="lb">Stop</span><input class="in" type="time" data-t="e" value="'+(s.stopAt||'')+'"></div><button class="sb" data-a="clt">Clear start/stop times</button><div class="ln"><button class="sb" data-a="mvl">◀ Move left</button><button class="sb" data-a="mvr">Move right ▶</button></div><div class="ln"><button class="sb" data-a="rp">Replace song</button><button class="sb" data-a="del">Delete</button></div><button class="sb" data-a="x">Close</button>';
+/* Hold the grip under a song and drag it left or right to move it */
+$('#ch').addEventListener('pointerdown',e=>{
+ const h=e.target.closest('.dg');if(!h)return;
+ const c=h.closest('.c');if(!c||!c.dataset.id)return;
+ e.preventDefault();
+ const g=c.parentNode,hw=c.offsetWidth;let x=e.clientX;const off=x-c.getBoundingClientRect().left;
+ c.classList.add('dr');
+ const place=()=>{
+  c.style.transform='none';
+  const mid=()=>x-off+hw/2;
+  let p=c.previousElementSibling,n=c.nextElementSibling;
+  while(p&&mid()<p.getBoundingClientRect().left+p.offsetWidth/2){g.insertBefore(p,c.nextSibling);p=c.previousElementSibling}
+  while(n&&n.dataset.id&&mid()>n.getBoundingClientRect().left+n.offsetWidth/2){g.insertBefore(n,c);n=c.nextElementSibling}
+  c.style.transform='translateX('+(x-off-c.getBoundingClientRect().left)+'px)';
+ };
+ const mv=ev=>{x=ev.clientX;place()};
+ const iv=setInterval(()=>{const r=g.getBoundingClientRect();if(x<r.left+36)g.scrollLeft-=10;else if(x>r.right-36)g.scrollLeft+=10;else return;place()},16);
+ const up=()=>{
+  clearInterval(iv);removeEventListener('pointermove',mv);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);
+  c.style.transform='';c.classList.remove('dr');
+  songs=[...g.children].filter(q=>q.dataset.id).map(q=>songs.find(s=>s.id===+q.dataset.id));so();
+ };
+ addEventListener('pointermove',mv);addEventListener('pointerup',up);addEventListener('pointercancel',up);
+ place();
+});
 $('#tm').onclick=()=>sheet(sTm());
 const sSt=()=>'<h3>Settings</h3><div class="lb">Fade in / out (play, pause, crossfade)</div><div class="ln"><input id="fd" type="range" min="0" max="6" step="0.5" value="'+fadeS+'"><span id="fdt" class="lb">'+(fadeS?fadeS+' s':'Off')+'</span></div>'
  +'<div class="lb">Display theme</div><div class="pl">'+['auto','dark','light','blue','green'].map(t=>'<button data-a="th" data-v="'+t+'" aria-pressed="'+((lg('cs_theme')||'auto')===t)+'">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div>'
  +'<div class="lb">Audio</div><button class="sb" data-a="eqo">Equalizer &amp; bass boost</button>'
- +'<details><summary>About</summary><p><b>Channel Soundboard v7</b><br>Creator: <b>Balram Sevak</b></p><p>A free, offline soundboard mixer. Every song is a channel with its own fader, mute and play button.</p></details><details><summary>Features</summary><ul><li>Unlimited channels, per-channel volume and mute</li><li>Multiplay, crossfade, shuffle, repeat, continue</li><li>Equalizer presets and bass boost</li><li>Timer and per-song start/stop times</li><li>Waveform seek bar, rewind/forward</li><li>Works offline, installs like an app</li></ul></details><details><summary>How to play</summary><ol><li>Tap <b>+ Add song</b> and pick songs from your phone.</li><li>Tap the round play button on a channel.</li><li>Drag the fader for volume, tap the speaker button to mute only that song.</li><li>Choose Stop, Repeat or Continue for what happens when a song ends.</li><li>Tap the song name for start/stop time, moving or deleting.</li></ol></details><details><summary>Why it is useful</summary><p>Play many sounds together or one after another, prepare a playlist for a programme, and let the timer start or stop songs for you, all without internet.</p></details><details><summary>Other</summary><ul><li>Songs stay on this device only; nothing is uploaded.</li><li>Timers need the app open.</li><li>Fade 0 = no fade, 6 = slow crossfade.</li></ul></details>'+'<button class="sb" data-a="x">Close</button>';
+ +'<details><summary>About</summary><p><b>Channel Soundboard v8</b><br>Creator: <b>Balram Sevak</b></p><p>A free, offline soundboard mixer. Every song is a channel with its own fader, mute and play button.</p></details><details><summary>Features</summary><ul><li>Unlimited channels, per-channel volume and mute</li><li>Multiplay, crossfade, shuffle, repeat, continue</li><li>Equalizer presets and bass boost</li><li>Timer and per-song start/stop times</li><li>Waveform seek bar, rewind/forward</li><li>Works offline, installs like an app</li></ul></details><details><summary>How to play</summary><ol><li>Tap <b>+ Add song</b> and pick songs from your phone.</li><li>Tap the round play button on a channel.</li><li>Drag the fader for volume, tap the speaker button to mute only that song.</li><li>Choose Stop, Repeat or Continue for what happens when a song ends.</li><li>Tap the song name for start/stop time, moving or deleting.</li></ol></details><details><summary>Why it is useful</summary><p>Play many sounds together or one after another, prepare a playlist for a programme, and let the timer start or stop songs for you, all without internet.</p></details><details><summary>Other</summary><ul><li>Songs stay on this device only; nothing is uploaded.</li><li>Timers need the app open.</li><li>Fade 0 = no fade, 6 = slow crossfade.</li></ul></details>'+'<button class="sb" data-a="x">Close</button>';
 $('#eqb').onclick=()=>sheet(sEq());
 $('#stb').onclick=()=>sheet(sSt());
 async function openDev(s){
